@@ -1,25 +1,10 @@
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-import crypto from "crypto";
 import { createError } from "../utils/createError.js";
-
-const UPLOAD_DIR = path.join(process.cwd(), "uploads", "products");
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_EXT = [".jpg", ".jpeg", ".png", ".webp"];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${crypto.randomUUID()}${ext}`);
-  },
-});
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -31,7 +16,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: MAX_SIZE },
 });

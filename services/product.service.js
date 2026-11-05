@@ -1,6 +1,9 @@
 import * as productRepo from "../repositories/product.repository.js";
 import { createError } from "../utils/createError.js";
-import { removeFile, removeImageByUrl } from "../utils/file.js";
+import {
+  uploadImageToCloud,
+  deleteImageFromCloud,
+} from "../configs/cloudinary.config.js";
 
 const isAdmin = (user) => Boolean(user) && user.role === "ADMIN";
 
@@ -142,24 +145,34 @@ export const updateProductImage = async (id, file) => {
     throw createError(400, "Cần gửi file ảnh trong trường image");
   }
 
-  // id sai hoặc sản phẩm không có thì xóa file vừa upload để khỏi để rác
-  let existing;
+  // kiểm tra sản phẩm trước, không có thì khỏi upload
+  const existing = await productRepo.getProductById(parseId(id));
+  if (!existing) {
+    throw createError(404, "Không tìm thấy sản phẩm");
+  }
+
+  let result;
   try {
-    existing = await productRepo.getProductById(parseId(id));
-    if (!existing) {
-      throw createError(404, "Không tìm thấy sản phẩm");
-    }
+    result = await uploadImageToCloud(file.buffer);
   } catch (error) {
-    await removeFile(file.path);
+    throw createError(502, "Không upload được ảnh lên Cloudinary, thử lại sau");
+  }
+
+  try {
+    await productRepo.updateProductImage(
+      existing.id,
+      result.secure_url,
+      result.public_id,
+    );
+  } catch (error) {
+    // lưu DB lỗi thì xóa ảnh vừa upload, tránh để ảnh mồ côi trên Cloudinary
+    await deleteImageFromCloud(result.public_id);
     throw error;
   }
 
-  const imageUrl = `/uploads/products/${file.filename}`;
-  await productRepo.updateProductImage(existing.id, imageUrl);
-
   // thay ảnh mới thì xóa ảnh cũ
-  if (existing.image_url) {
-    await removeImageByUrl(existing.image_url);
+  if (existing.image_public_id) {
+    await deleteImageFromCloud(existing.image_public_id);
   }
 
   const updated = await productRepo.getProductById(existing.id);

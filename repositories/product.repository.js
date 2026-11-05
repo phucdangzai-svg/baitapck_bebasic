@@ -49,9 +49,9 @@ export const deactivateProduct = async (id) => {
   await pool.query("UPDATE products SET is_active = FALSE WHERE id = ?", [id]);
 };
 
-export const updateProductImage = async (id, imageUrl) => {
-  await pool.query("UPDATE products SET image_url = ? WHERE id = ?", [
-    imageUrl,
-    id,
-  ]);
+export const updateProductImage = async (id, imageUrl, imagePublicId) => {
+  await pool.query(
+    "UPDATE products SET image_url = ?, image_public_id = ? WHERE id = ?",
+    [imageUrl, imagePublicId, id],
+  );
 };
