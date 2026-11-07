@@ -4,6 +4,13 @@ CREATE DATABASE IF NOT EXISTS shop_db
 
 USE shop_db;
 
+-- Xóa bảng cũ (nếu có) để file chạy lại được nhiều lần. Thứ tự: bảng con trước, bảng cha sau
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS users;
+
 -- 1. users
 CREATE TABLE users (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -17,21 +24,34 @@ CREATE TABLE users (
   CONSTRAINT chk_users_role CHECK (role IN ('USER', 'ADMIN'))
 );
 
--- 2. products
+-- 2. refresh_tokens
+CREATE TABLE refresh_tokens (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  user_id        INT NOT NULL,
+  refresh_token  VARCHAR(500) NOT NULL,
+  expires_at     DATETIME NOT NULL,
+  is_revoked     BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_rt_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- 3. products
 CREATE TABLE products (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(200) NOT NULL,
-  description TEXT NULL,
-  price       DECIMAL(12,0) NOT NULL,
-  stock       INT NOT NULL DEFAULT 0,
-  is_active   BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  name             VARCHAR(200) NOT NULL,
+  description      TEXT NULL,
+  price            DECIMAL(12,0) NOT NULL,
+  stock            INT NOT NULL DEFAULT 0,
+  image_url        VARCHAR(255) NULL,
+  image_public_id  VARCHAR(255) NULL,
+  is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT chk_products_price CHECK (price >= 0),
   CONSTRAINT chk_products_stock CHECK (stock >= 0)
 );
 
--- 3. orders
+-- 4. orders
 CREATE TABLE orders (
   id               INT AUTO_INCREMENT PRIMARY KEY,
   user_id          INT NOT NULL,
@@ -47,7 +67,7 @@ CREATE TABLE orders (
   CONSTRAINT chk_orders_status CHECK (status IN ('PENDING', 'SHIPPING', 'DELIVERED', 'CANCELLED'))
 );
 
--- 4. order_items
+-- 5. order_items
 CREATE TABLE order_items (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   order_id    INT NOT NULL,
@@ -63,6 +83,7 @@ CREATE TABLE order_items (
 
 -- ===== DỮ LIỆU MẪU =====
 
+-- Mật khẩu: admin@shop.com = Admin@123, an@gmail.com và binh@gmail.com = User@123
 INSERT INTO users (full_name, email, password, phone, role) VALUES
 ('Quản Trị Viên', 'admin@shop.com', '$2b$10$LWGMwcRzXMr86uTYUzwyjOESWToru2G0F7hGTVz2r8mLhKxohOLTi', '0900000001', 'ADMIN'),
 ('Nguyễn Văn An', 'an@gmail.com',   '$2b$10$G60gpHLt/x0sv5huFKlj5erQXqGr49qCeXEQtG8I9RWQgWywEc.zu', '0900000002', 'USER'),
